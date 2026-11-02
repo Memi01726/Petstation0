@@ -1,481 +1,492 @@
-import React, { useState } from 'react';
-import { 
-  Lock, User, ShoppingCart, Package, Users, BarChart2, FileText, 
-  LogOut, Plus, Trash2, CheckCircle, AlertTriangle, DollarSign, Search, ShieldCheck 
-} from 'lucide-react';
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PET'S STATION - ระบบบริหารจัดการสถานีสัตว์เลี้ยง</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & Babel CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Prompt', sans-serif; background-color: #F8F9FA; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
 
-export default function PetsStationApp() {
-  // Authentication State
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState('Cashier'); // Default เป็นคนขายตามความต้องการ
-  const [loginError, setLoginError] = useState('');
+    <script type="text/babel">
+        const { useState } = React;
 
-  // Navigation State (ถ้าเป็น Role Cashier จะล็อกให้หน้าแรกอยู่ที่ POS ทันที)
-  const [activeTab, setActiveTab] = useState('pos');
+        function App() {
+          const [isLoggedIn, setIsLoggedIn] = useState(false);
+          const [username, setUsername] = useState('');
+          const [password, setPassword] = useState('');
+          const [role, setRole] = useState('Cashier');
+          const [loginError, setLoginError] = useState('');
+          
+          // Flowchart-based Active Tab
+          const [activeTab, setActiveTab] = useState('login_flow');
 
-  // POS State
-  const [cart, setCart] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [cashReceived, setCashReceived] = useState('');
-  const [lastReceipt, setLastReceipt] = useState(null);
+          // POS & Flow States
+          const [cart, setCart] = useState([]);
+          const [searchTerm, setSearchTerm] = useState('');
+          const [cashReceived, setCashReceived] = useState('');
+          const [lastReceipt, setLastReceipt] = useState(null);
 
-  // Stock State
-  const [products, setProducts] = useState([
-    { id: 1, name: 'อาหารเม็ดแมวโต Premium (1kg)', category: 'อาหารสัตว์', price: 290, stock: 45, minStock: 10 },
-    { id: 2, name: 'อาหารเปียกสุนัข รสเนื้อย่าง', category: 'อาหารสัตว์', price: 45, stock: 8, minStock: 15 },
-    { id: 3, name: 'ทรายแมวเต้าหู้ธรรมชาติ (6L)', category: 'อุปกรณ์สัตว์เลี้ยง', price: 220, stock: 30, minStock: 10 },
-    { id: 4, name: 'ขนมแมวเลียแพ็ค 4 ซอง', category: 'ขนม/อาหารว่าง', price: 65, stock: 120, minStock: 25 },
-    { id: 5, name: 'แชมพูอาบน้ำสูตรอ่อนโยนสำหรับสุนัข', category: 'ของใช้/อาบน้ำ', price: 180, stock: 5, minStock: 8 }
-  ]);
-  const [showAddProduct, setShowAddProduct] = useState(false);
-  const [newProduct, setNewProduct] = useState({ name: '', category: 'อาหารสัตว์', price: 0, stock: 0, minStock: 10 });
+          // LINE OA Notification Simulation State
+          const [lineNotifications, setLineNotifications] = useState([
+            { id: 1, time: '09:00', text: '🐾 [LINE OA] แจ้งเตือนเปิดร้านสำเร็จ - พนักงานเข้างานครบถ้วน' },
+            { id: 2, time: '10:15', text: '🚨 [LINE OA] สต็อกสินค้า "อาหารเปียกสุนัข" ใกล้หมด (เหลือ 8 ชิ้น)' }
+          ]);
+          const [showLineModal, setShowLineModal] = useState(false);
+          const [customLineMsg, setCustomLineMsg] = useState('');
 
-  // HR & Staff State
-  const [staffList, setStaffList] = useState([
-    { id: 1, name: 'คุณแม่ (ผู้จัดการร้าน)', role: 'Manager', status: 'เข้างานแล้ว', checkIn: '08:30' },
-    { id: 2, name: 'สมชาย (พนักงานหน้าร้าน/Stock)', role: 'Staff', status: 'เข้างานแล้ว', checkIn: '09:00' },
-    { id: 3, name: 'วิไล (พนักงานแคชเชียร์)', role: 'Cashier', status: 'เข้างานแล้ว', checkIn: '08:45' }
-  ]);
+          const [products, setProducts] = useState([
+            { id: 1, name: 'อาหารเม็ดแมวโต Premium (1kg)', category: 'อาหารสัตว์', price: 290, stock: 45, minStock: 10 },
+            { id: 2, name: 'อาหารเปียกสุนัข รสเนื้อย่าง', category: 'อาหารสัตว์', price: 45, stock: 8, minStock: 15 },
+            { id: 3, name: 'ทรายแมวเต้าหู้ธรรมชาติ (6L)', category: 'อุปกรณ์สัตว์เลี้ยง', price: 220, stock: 30, minStock: 10 },
+            { id: 4, name: 'ขนมแมวเลียแพ็ค 4 ซอง', category: 'ขนม/อาหารว่าง', price: 65, stock: 120, minStock: 25 },
+            { id: 5, name: 'แชมพูอาบน้ำสูตรอ่อนโยนสำหรับสุนัข', category: 'ของใช้/อาบน้ำ', price: 180, stock: 5, minStock: 8 }
+          ]);
 
-  // Audit Logs State
-  const [auditLogs, setAuditLogs] = useState([
-    { id: 1, time: '08:45:10', user: 'วิไล', action: 'Login เข้าสู่ระบบแคชเชียร์', type: 'AUTH' },
-    { id: 2, time: '09:00:22', user: 'สมชาย', action: 'อัปเดตสต็อกสินค้า อาหารเปียกสุนัข', type: 'STOCK' },
-    { id: 3, time: '10:15:45', user: 'วิไล', action: 'ทำรายการขาย POS (ยอด 335 บาท)', type: 'POS' }
-  ]);
+          const sendLineOA = (msg) => {
+            const newNotif = { id: Date.now(), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}), text: `🐾 [LINE OA] ${msg}` };
+            setLineNotifications(prev => [newNotif, ...prev]);
+            alert(`ส่งข้อความเข้า LINE OA สำเร็จ!\n"${msg}"`);
+          };
 
-  const addLog = (action, type) => {
-    const now = new Date().toLocaleTimeString();
-    setAuditLogs(prev => [{ id: Date.now(), time: now, user: username || 'พนักงาน', action, type }, ...prev]);
-  };
+          const handleLogin = (e) => {
+            e.preventDefault();
+            if (username.trim() !== '' && password.trim() !== '') {
+              setIsLoggedIn(true);
+              setLoginError('');
+              sendLineOA(`ผู้ใช้งาน ${username} (${role}) ทำการ Login เข้าสู่ระบบ Flowchart`);
+              setActiveTab('pos');
+            } else {
+              setLoginError('กรุณากรอกข้อมูลให้ครบถ้วนตามขั้นตอน Flowchart');
+            }
+          };
 
-  const handleLogin = (e) => {
-    e.preventDefault();
-    if (username.trim() !== '' && password.trim() !== '') {
-      setIsLoggedIn(true);
-      setLoginError('');
-      addLog(`ผู้ใช้งาน ${username} (${role}) เข้าสู่ระบบสำเร็จ`, 'AUTH');
-    } else {
-      setLoginError('กรุณากรอกชื่อผู้ใช้งานและรหัสผ่านให้ครบถ้วน');
-    }
-  };
+          const handleLogout = () => {
+            setIsLoggedIn(false);
+            setUsername('');
+            setPassword('');
+          };
 
-  const handleLogout = () => {
-    addLog(`ผู้ใช้งาน ${username} ออกจากระบบ`, 'AUTH');
-    setIsLoggedIn(false);
-    setUsername('');
-    setPassword('');
-  };
+          const addToCart = (product) => {
+            setCart(prev => {
+              const existing = prev.find(item => item.id === product.id);
+              if (existing) {
+                return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
+              }
+              return [...prev, { ...product, qty: 1 }];
+            });
+          };
 
-  // POS Functions
-  const addToCart = (product) => {
-    setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
-      if (existing) {
-        return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
-      }
-      return [...prev, { ...product, qty: 1 }];
-    });
-  };
+          const updateCartQty = (id, delta) => {
+            setCart(prev => prev.map(item => {
+              if (item.id === id) {
+                const newQty = item.qty + delta;
+                return newQty > 0 ? { ...item, qty: newQty } : null;
+              }
+              return item;
+            }).filter(Boolean));
+          };
 
-  const updateCartQty = (id, delta) => {
-    setCart(prev => prev.map(item => {
-      if (item.id === id) {
-        const newQty = item.qty + delta;
-        return newQty > 0 ? { ...item, qty: newQty } : null;
-      }
-      return item;
-    }).filter(Boolean));
-  };
+          const calculateTotal = () => cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
 
-  const calculateTotal = () => cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+          const handleCheckout = () => {
+            const total = calculateTotal();
+            const cash = parseFloat(cashReceived) || total;
+            if (cash < total) {
+              alert('ยอดเงินสดไม่เพียงพอ');
+              return;
+            }
 
-  const handleCheckout = () => {
-    const total = calculateTotal();
-    const cash = parseFloat(cashReceived) || total;
-    if (cash < total) {
-      alert('จำนวนเงินรับมาน้อยกว่ายอดรวมสุทธิ');
-      return;
-    }
+            setProducts(prevProducts => prevProducts.map(p => {
+              const cartItem = cart.find(ci => ci.id === p.id);
+              if (cartItem) {
+                const remaining = p.stock - cartItem.qty;
+                if (remaining <= p.minStock) {
+                  sendLineOA(`เตือนสต็อกด่วน! สินค้า "${p.name}" เหลือเพียง ${remaining} ชิ้น`);
+                }
+                return { ...p, stock: remaining };
+              }
+              return p;
+            }));
 
-    // Update Stock
-    setProducts(prevProducts => prevProducts.map(p => {
-      const cartItem = cart.find(ci => ci.id === p.id);
-      if (cartItem) {
-        return { ...p, stock: p.stock - cartItem.qty };
-      }
-      return p;
-    }));
+            const change = cash - total;
+            setLastReceipt({ items: [...cart], total, cash, change, time: new Date().toLocaleString() });
+            sendLineOA(`ยอดขายสำเร็จ POS: ชำระเงิน ${total} บาท ทอน ${change} บาท`);
+            setCart([]);
+            setCashReceived('');
+          };
 
-    const change = cash - total;
-    setLastReceipt({ items: [...cart], total, cash, change, time: new Date().toLocaleString() });
-    addLog(`ชำระเงินสำเร็จ ยอดรวม ${total} บาท (รับเงิน ${cash} บาท ทอน ${change} บาท)`, 'POS');
-    setCart([]);
-    setCashReceived('');
-  };
-
-  // --- 1. หน้าจอ LOGIN (โทนสีแดงเข้มตามโลโก้) ---
-  if (!isLoggedIn) {
-    return (
-      <div className="min-h-screen bg-[#8B1E24] flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border-4 border-[#6d151b]">
-          <div className="bg-[#8B1E24] p-8 text-center text-white">
-            <div className="w-24 h-24 mx-auto bg-white rounded-full flex items-center justify-center shadow-inner mb-4 border-2 border-red-200">
-              <span className="text-[#8B1E24] font-bold text-3xl">🐾</span>
-            </div>
-            <h1 className="text-2xl font-bold tracking-wide">PET'S STATION</h1>
-            <p className="text-red-200 text-sm mt-1">สถานีสัตว์เลี้ยง - ระบบบริหารจัดการร้าน</p>
-          </div>
-          <form onSubmit={handleLogin} className="p-8 space-y-5">
-            {loginError && (
-              <div className="bg-red-50 border-l-4 border-red-600 p-3 text-red-700 text-sm rounded">
-                {loginError}
-              </div>
-            )}
-            <div>
-              <label className="block text-gray-700 text-sm font-semibold mb-2">ชื่อผู้ใช้งาน (Username)</label>
-              <div className="relative">
-                <User className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
-                <input 
-                  type="text" 
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="เช่น wilai_cashier" 
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-gray-700 text-sm font-semibold mb-2">รหัสผ่าน (Password)</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="********" 
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-gray-700 text-sm font-semibold mb-2">เลือกสิทธิ์การใช้งาน (Role)</label>
-              <select 
-                value={role} 
-                onChange={(e) => setRole(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
-              >
-                <option value="Cashier">Cashier (พนักงานขายหน้าร้าน)</option>
-                <option value="Manager">Manager (ผู้จัดการร้าน)</option>
-                <option value="Admin">Admin (ผู้ดูแลระบบสูงสุด)</option>
-              </select>
-            </div>
-            <button 
-              type="submit" 
-              className="w-full bg-[#8B1E24] hover:bg-[#6d151b] text-white font-bold py-3 rounded-lg transition duration-200 shadow-lg"
-            >
-              เข้าสู่ระบบ (Login)
-            </button>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  // --- 2. หน้าจอหลักหลัง LOGIN (เน้น Role คนขาย / POS) ---
-  return (
-    <div className="min-h-screen bg-gray-100 flex flex-col font-sans">
-      {/* Top Navbar */}
-      <header className="bg-[#8B1E24] text-white shadow-md flex justify-between items-center px-6 py-4">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow">
-            <span className="text-[#8B1E24] font-bold text-xl">🐾</span>
-          </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-wide">PET'S STATION (สถานีสัตว์เลี้ยง)</h1>
-            <p className="text-xs text-red-200">ระบบขายหน้าร้านและจัดการสต็อก</p>
-          </div>
-        </div>
-        <div className="flex items-center space-x-4">
-          <div className="text-right">
-            <span className="block font-semibold text-sm">{username}</span>
-            <span className="text-xs bg-red-800 px-2 py-0.5 rounded text-red-100">สถานะ: {role}</span>
-          </div>
-          <button 
-            onClick={handleLogout}
-            className="flex items-center space-x-1 bg-red-950 hover:bg-black text-white px-3 py-2 rounded-lg text-sm transition"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>ออกจากระบบ</span>
-          </button>
-        </div>
-      </header>
-
-      {/* Navigation Tabs (ซ่อนเมนูผู้บริหารหากเป็นแคชเชียร์ หรือเปิดให้เข้าถึงตามสิทธิ์) */}
-      <nav className="bg-white shadow px-6 flex space-x-1 overflow-x-auto">
-        {[
-          { id: 'pos', label: 'ระบบขายหน้าร้าน (POS)', icon: ShoppingCart },
-          { id: 'stock', label: 'คลังสินค้า (Stock)', icon: Package },
-          ...(role !== 'Cashier' ? [
-            { id: 'dashboard', label: 'Dashboard สรุปยอด', icon: BarChart2 },
-            { id: 'hr', label: 'จัดการ HR & พนักงาน', icon: Users },
-            { id: 'audit', label: 'ตรวจสอบระบบ (Audit Log)', icon: FileText }
-          ] : [])
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center space-x-2 px-5 py-3 border-b-4 font-semibold text-sm transition whitespace-nowrap ${
-                isActive 
-                  ? 'border-[#8B1E24] text-[#8B1E24] bg-red-50/50' 
-                  : 'border-transparent text-gray-600 hover:text-[#8B1E24] hover:bg-gray-50'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </nav>
-
-      {/* Main Content Area */}
-      <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
-        
-        {/* --- POS TAB (หน้าหลักสำหรับคนขาย) --- */}
-        {activeTab === 'pos' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Catalog สินค้า */}
-            <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow flex flex-col">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-800">เลือกสินค้าหน้าร้าน (Quick Catalog)</h3>
-                <div className="relative w-64">
-                  <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
-                  <input 
-                    type="text" 
-                    placeholder="ค้นหาชื่อสินค้า / สแกนบาร์โค้ด..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 overflow-y-auto max-h-[500px] p-1">
-                {products
-                  .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
-                  .map(product => (
-                    <div 
-                      key={product.id}
-                      onClick={() => product.stock > 0 && addToCart(product)}
-                      className={`border rounded-xl p-4 flex flex-col justify-between transition cursor-pointer bg-white hover:shadow-md ${
-                        product.stock <= 0 ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'hover:border-[#8B1E24]'
-                      }`}
+          if (!isLoggedIn) {
+            return (
+              <div className="min-h-screen bg-[#8B1E24] flex items-center justify-center p-4">
+                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border-4 border-[#6d151b]">
+                  <div className="bg-[#8B1E24] p-8 text-center text-white">
+                    <div className="w-24 h-24 mx-auto bg-white rounded-full flex items-center justify-center shadow-inner mb-4 border-2 border-red-200">
+                      <span className="text-[#8B1E24] font-bold text-3xl">🐾</span>
+                    </div>
+                    <h1 className="text-2xl font-bold tracking-wide">PET'S STATION</h1>
+                    <p className="text-red-200 text-sm mt-1">ระบบ Flowchart Swimlane Login & Verification</p>
+                  </div>
+                  <form onSubmit={handleLogin} className="p-8 space-y-5">
+                    {loginError && (
+                      <div className="bg-red-50 border-l-4 border-red-600 p-3 text-red-700 text-sm rounded">
+                        {loginError}
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-gray-700 text-sm font-semibold mb-2">ชื่อผู้ใช้งาน (User Validation)</label>
+                      <input 
+                        type="text" 
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        placeholder="กรอกชื่อผู้ใช้งาน" 
+                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 text-sm font-semibold mb-2">รหัสผ่าน (Password Authentication)</label>
+                      <input 
+                        type="password" 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="********" 
+                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-700 text-sm font-semibold mb-2">สิทธิ์ตาม Flowchart (Role)</label>
+                      <select 
+                        value={role} 
+                        onChange={(e) => setRole(e.target.value)}
+                        className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
+                      >
+                        <option value="Cashier">พนักงานขาย / แคชเชียร์ (POS)</option>
+                        <option value="Manager">ผู้จัดการ / ฝ่ายบริหาร (Dashboard & Audit)</option>
+                      </select>
+                    </div>
+                    <button 
+                      type="submit" 
+                      className="w-full bg-[#8B1E24] hover:bg-[#6d151b] text-white font-bold py-3 rounded-lg transition duration-200 shadow-lg"
                     >
-                      <div>
-                        <span className="text-xs bg-red-100 text-[#8B1E24] px-2 py-0.5 rounded font-semibold">{product.category}</span>
-                        <h4 className="font-semibold text-gray-800 mt-2 text-sm line-clamp-2">{product.name}</h4>
-                      </div>
-                      <div className="mt-4 flex justify-between items-center">
-                        <span className="font-bold text-[#8B1E24] text-lg">฿{product.price}</span>
-                        <span className={`text-xs ${product.stock <= 5 ? 'text-red-600 font-bold' : 'text-gray-500'}`}>
-                          คงเหลือ: {product.stock}
-                        </span>
-                      </div>
-                    </div>
-                ))}
-              </div>
-            </div>
-
-            {/* ตะกร้าสินค้าและการชำระเงิน */}
-            <div className="bg-white p-6 rounded-xl shadow flex flex-col justify-between">
-              <div>
-                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                  <ShoppingCart className="w-5 h-5 text-[#8B1E24] mr-2" /> ตะกร้าสินค้าปัจจุบัน
-                </h3>
-                <div className="space-y-3 max-h-[250px] overflow-y-auto mb-4">
-                  {cart.length === 0 ? (
-                    <p className="text-gray-400 text-center py-10 text-sm">ยังไม่มีสินค้าในตะกร้า (คลิกเลือกสินค้าด้านซ้าย)</p>
-                  ) : (
-                    cart.map(item => (
-                      <div key={item.id} className="flex justify-between items-center border-b pb-2">
-                        <div className="flex-1 pr-2">
-                          <p className="text-sm font-semibold text-gray-800 truncate">{item.name}</p>
-                          <p className="text-xs text-gray-500">฿{item.price} x {item.qty}</p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <button onClick={() => updateCartQty(item.id, -1)} className="px-2 bg-gray-200 rounded text-sm">-</button>
-                          <span className="text-sm font-semibold">{item.qty}</span>
-                          <button onClick={() => updateCartQty(item.id, 1)} className="px-2 bg-gray-200 rounded text-sm">+</button>
-                        </div>
-                      </div>
-                    ))
-                  )}
+                      ตรวจสอบข้อมูลและเข้าสู่ระบบ (Login Flow)
+                    </button>
+                  </form>
                 </div>
               </div>
+            );
+          }
 
-              <div className="border-t pt-4 space-y-3">
-                <div className="flex justify-between text-xl font-bold text-gray-800">
-                  <span>ยอดรวมสุทธิ:</span>
-                  <span className="text-[#8B1E24]">฿{calculateTotal()}</span>
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">รับเงินสดจากลูกค้า (บาท)</label>
-                  <input 
-                    type="number" 
-                    value={cashReceived}
-                    onChange={(e) => setCashReceived(e.target.value)}
-                    placeholder={`ขั้นต่ำ ฿${calculateTotal()}`}
-                    className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
-                  />
-                </div>
-                <button 
-                  onClick={handleCheckout}
-                  disabled={cart.length === 0}
-                  className="w-full bg-[#8B1E24] hover:bg-[#6d151b] disabled:bg-gray-300 text-white font-bold py-3 rounded-lg transition shadow"
-                >
-                  ชำระเงินและพิมพ์ใบเสร็จ
-                </button>
-              </div>
-            </div>
-
-            {/* Receipt Modal Preview */}
-            {lastReceipt && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl border-2 border-[#8B1E24]">
-                  <div className="text-center mb-4">
-                    <h3 className="font-bold text-lg text-[#8B1E24]">PET'S STATION (สถานีสัตว์เลี้ยง)</h3>
-                    <p className="text-xs text-gray-500">ใบเสร็จรับเงินอย่างย่อ</p>
-                    <p className="text-xs text-gray-400 mt-1">{lastReceipt.time}</p>
+          return (
+            <div className="min-h-screen bg-gray-100 flex flex-col font-sans">
+              {/* Header */}
+              <header className="bg-[#8B1E24] text-white shadow-md flex justify-between items-center px-6 py-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow">
+                    <span className="text-[#8B1E24] font-bold text-xl">🐾</span>
                   </div>
-                  <div className="border-t border-b py-3 my-2 space-y-2 text-sm">
-                    {lastReceipt.items.map((it, idx) => (
-                      <div key={idx} className="flex justify-between">
-                        <span>{it.name} x {it.qty}</span>
-                        <span>฿{it.price * it.qty}</span>
-                      </div>
-                    ))}
+                  <div>
+                    <h1 className="text-xl font-bold tracking-wide">PET'S STATION (สถานีสัตว์เลี้ยง)</h1>
+                    <p className="text-xs text-red-200">ระบบเชื่อมโยงตาม Swimlane Flowchart Overview[cite: 3]</p>
                   </div>
-                  <div className="space-y-1 text-sm mb-4">
-                    <div className="flex justify-between font-bold">
-                      <span>ยอดสุทธิ:</span>
-                      <span>฿{lastReceipt.total}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-600">
-                      <span>รับเงินสด:</span>
-                      <span>฿{lastReceipt.cash}</span>
-                    </div>
-                    <div className="flex justify-between text-green-600 font-semibold">
-                      <span>เงินทอน:</span>
-                      <span>฿{lastReceipt.change}</span>
-                    </div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  <button 
+                    onClick={() => setShowLineModal(true)}
+                    className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded-lg text-sm font-semibold flex items-center space-x-1 shadow transition"
+                  >
+                    <span>💬 LINE OA Hub ({lineNotifications.length})</span>
+                  </button>
+                  <div className="text-right">
+                    <span className="block font-semibold text-sm">{username}</span>
+                    <span className="text-xs bg-red-800 px-2 py-0.5 rounded text-red-100">{role}</span>
                   </div>
                   <button 
-                    onClick={() => setLastReceipt(null)}
-                    className="w-full bg-[#8B1E24] hover:bg-black text-white py-2 rounded-lg text-sm font-semibold"
+                    onClick={handleLogout}
+                    className="bg-red-950 hover:bg-black text-white px-3 py-2 rounded-lg text-sm transition"
                   >
-                    ปิดใบเสร็จ (เริ่มลูกค้ารายถัดไป)
+                    ออกจากระบบ
                   </button>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              </header>
 
-        {/* --- STOCK TAB --- */}
-        {activeTab === 'stock' && (
-          <div className="space-y-6">
-            <div className="bg-white p-6 rounded-xl shadow">
-              <h3 className="text-lg font-bold text-gray-800">ตรวจสอบสต็อกสินค้าคงเหลือ</h3>
-              <p className="text-xs text-gray-500 mt-1">เช็กจำนวนสินค้าในคลังเพื่อแจ้งลูกค้าหรือเติมสต็อก</p>
-            </div>
-            <div className="bg-white rounded-xl shadow overflow-hidden">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-red-50 text-[#8B1E24] border-b text-sm">
-                    <th className="p-4">ชื่อสินค้า</th>
-                    <th className="p-4">หมวดหมู่</th>
-                    <th className="p-4">ราคาขาย</th>
-                    <th className="p-4">คงเหลือ</th>
-                    <th className="p-4">สถานะ</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y text-sm text-gray-700">
-                  {products.map(p => (
-                    <tr key={p.id} className="hover:bg-gray-50">
-                      <td className="p-4 font-semibold">{p.name}</td>
-                      <td className="p-4 text-gray-500">{p.category}</td>
-                      <td className="p-4 font-bold text-[#8B1E24]">฿{p.price}</td>
-                      <td className="p-4">{p.stock} ชิ้น</td>
-                      <td className="p-4">
-                        {p.stock <= p.minStock ? (
-                          <span className="bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-xs font-semibold">ใกล้หมด</span>
-                        ) : (
-                          <span className="bg-green-100 text-green-700 px-2.5 py-1 rounded-full text-xs font-semibold">ปกติ</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+              {/* Navigation Flowchart Tabs */}
+              <nav className="bg-white shadow px-6 flex space-x-1 overflow-x-auto border-b">
+                {[
+                  { id: 'pos', label: '1. ระบบขายหน้าร้าน (POS Flow)' },
+                  { id: 'stock', label: '2. จัดการคลังและแจ้งเตือน (Stock & LINE OA)' },
+                  { id: 'audit', label: '3. ตรวจสอบระบบและ Audit Trail' }
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`px-5 py-3 border-b-4 font-semibold text-sm transition whitespace-nowrap ${
+                      activeTab === tab.id 
+                        ? 'border-[#8B1E24] text-[#8B1E24] bg-red-50/50' 
+                        : 'border-transparent text-gray-600 hover:text-[#8B1E24]'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
 
-        {/* --- DASHBOARD TAB (เฉพาะ Manager / Admin) --- */}
-        {activeTab === 'dashboard' && role !== 'Cashier' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white p-6 rounded-xl shadow border-l-4 border-[#8B1E24]">
-              <p className="text-sm text-gray-500">ยอดขายรวมวันนี้</p>
-              <h3 className="text-3xl font-bold text-gray-800 mt-2">฿ 4,850</h3>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow border-l-4 border-amber-500">
-              <p className="text-sm text-gray-500">สินค้าใกล้หมด</p>
-              <h3 className="text-3xl font-bold text-amber-600 mt-2">2 รายการ</h3>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow border-l-4 border-green-600">
-              <p className="text-sm text-gray-500">พนักงานปฏิบัติงาน</p>
-              <h3 className="text-3xl font-bold text-gray-800 mt-2">3 คน</h3>
-            </div>
-          </div>
-        )}
+              {/* Main Workspace */}
+              <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
+                {activeTab === 'pos' && (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow flex flex-col">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-bold text-gray-800">แคตตาล็อกสินค้าหน้าร้าน (POS Swimlane)</h3>
+                        <input 
+                          type="text" 
+                          placeholder="ค้นหาสินค้า..." 
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="px-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 overflow-y-auto max-h-[500px] p-1">
+                        {products
+                          .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                          .map(product => (
+                            <div 
+                              key={product.id}
+                              onClick={() => product.stock > 0 && addToCart(product)}
+                              className={`border rounded-xl p-4 flex flex-col justify-between transition cursor-pointer bg-white hover:shadow-md ${
+                                product.stock <= 0 ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'hover:border-[#8B1E24]'
+                              }`}
+                            >
+                              <div>
+                                <span className="text-xs bg-red-100 text-[#8B1E24] px-2 py-0.5 rounded font-semibold">{product.category}</span>
+                                <h4 className="font-semibold text-gray-800 mt-2 text-sm line-clamp-2">{product.name}</h4>
+                              </div>
+                              <div className="mt-4 flex justify-between items-center">
+                                <span className="font-bold text-[#8B1E24] text-lg">฿{product.price}</span>
+                                <span className={`text-xs ${product.stock <= 5 ? 'text-red-600 font-bold' : 'text-gray-500'}`}>
+                                  คงเหลือ: {product.stock}
+                                </span>
+                              </div>
+                            </div>
+                        ))}
+                      </div>
+                    </div>
 
-        {/* --- HR TAB --- */}
-        {activeTab === 'hr' && role !== 'Cashier' && (
-          <div className="bg-white p-6 rounded-xl shadow">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">รายชื่อพนักงานและการเข้างาน</h3>
-            <div className="space-y-3">
-              {staffList.map(s => (
-                <div key={s.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
-                  <div>
-                    <p className="font-semibold">{s.name}</p>
-                    <p className="text-xs text-gray-500">ตำแหน่ง: {s.role}</p>
+                    <div className="bg-white p-6 rounded-xl shadow flex flex-col justify-between">
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-800 mb-4">ตะกร้าสินค้าปัจจุบัน</h3>
+                        <div className="space-y-3 max-h-[250px] overflow-y-auto mb-4">
+                          {cart.length === 0 ? (
+                            <p className="text-gray-400 text-center py-10 text-sm">ยังไม่มีสินค้าในตะกร้า</p>
+                          ) : (
+                            cart.map(item => (
+                              <div key={item.id} className="flex justify-between items-center border-b pb-2">
+                                <div className="flex-1 pr-2">
+                                  <p className="text-sm font-semibold text-gray-800 truncate">{item.name}</p>
+                                  <p className="text-xs text-gray-500">฿{item.price} x {item.qty}</p>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <button onClick={() => updateCartQty(item.id, -1)} className="px-2 bg-gray-200 rounded text-sm">-</button>
+                                  <span className="text-sm font-semibold">{item.qty}</span>
+                                  <button onClick={() => updateCartQty(item.id, 1)} className="px-2 bg-gray-200 rounded text-sm">+</button>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="border-t pt-4 space-y-3">
+                        <div className="flex justify-between text-xl font-bold text-gray-800">
+                          <span>ยอดรวมสุทธิ:</span>
+                          <span className="text-[#8B1E24]">฿{calculateTotal()}</span>
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-500 mb-1">รับเงินสดจากลูกค้า (บาท)</label>
+                          <input 
+                            type="number" 
+                            value={cashReceived}
+                            onChange={(e) => setCashReceived(e.target.value)}
+                            placeholder={`ขั้นต่ำ ฿${calculateTotal()}`}
+                            className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
+                          />
+                        </div>
+                        <button 
+                          onClick={handleCheckout}
+                          disabled={cart.length === 0}
+                          className="w-full bg-[#8B1E24] hover:bg-[#6d151b] disabled:bg-gray-300 text-white font-bold py-3 rounded-lg transition shadow"
+                        >
+                          ชำระเงิน ตัดสต็อก และแจ้งเตือน LINE OA
+                        </button>
+                      </div>
+                    </div>
+
+                    {lastReceipt && (
+                      <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                        <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl border-2 border-[#8B1E24]">
+                          <div className="text-center mb-4">
+                            <h3 className="font-bold text-lg text-[#8B1E24]">PET'S STATION (สถานีสัตว์เลี้ยง)</h3>
+                            <p className="text-xs text-gray-500">ใบเสร็จรับเงินอย่างย่อ</p>
+                            <p className="text-xs text-gray-400 mt-1">{lastReceipt.time}</p>
+                          </div>
+                          <div className="border-t border-b py-3 my-2 space-y-2 text-sm">
+                            {lastReceipt.items.map((it, idx) => (
+                              <div key={idx} className="flex justify-between">
+                                <span>{it.name} x {it.qty}</span>
+                                <span>฿{it.price * it.qty}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="space-y-1 text-sm mb-4">
+                            <div className="flex justify-between font-bold">
+                              <span>ยอดสุทธิ:</span>
+                              <span>฿{lastReceipt.total}</span>
+                            </div>
+                            <div className="flex justify-between text-gray-600">
+                              <span>รับเงินสด:</span>
+                              <span>฿{lastReceipt.cash}</span>
+                            </div>
+                            <div className="flex justify-between text-green-600 font-semibold">
+                              <span>เงินทอน:</span>
+                              <span>฿{lastReceipt.change}</span>
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => setLastReceipt(null)}
+                            className="w-full bg-gray-800 hover:bg-black text-white py-2 rounded-lg text-sm font-semibold"
+                          >
+                            ปิดใบเสร็จ
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <span className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold">{s.status} ({s.checkIn})</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+                )}
 
-        {/* --- AUDIT LOG TAB --- */}
-        {activeTab === 'audit' && role !== 'Cashier' && (
-          <div className="bg-white p-6 rounded-xl shadow">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">ประวัติการใช้งานระบบ (Audit Trail)</h3>
-            <div className="space-y-2">
-              {auditLogs.map(l => (
-                <div key={l.id} className="text-sm p-3 bg-gray-50 rounded border flex justify-between">
-                  <span>[{l.time}] <b>{l.user}</b>: {l.action}</span>
-                  <span className="text-xs bg-gray-200 px-2 py-0.5 rounded">{l.type}</span>
+                {activeTab === 'stock' && (
+                  <div className="space-y-6">
+                    <div className="flex justify-between items-center bg-white p-6 rounded-xl shadow">
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-800">คลังสินค้าและระบบแจ้งเตือนอัตโนมัติเข้า LINE OA</h3>
+                        <p className="text-xs text-gray-500">เมื่อสินค้าต่ำกว่ากำหนด ระบบจะยิงแจ้งเตือนเข้า LINE OA ทันทีตาม Flowchart</p>
+                      </div>
+                      <button 
+                        onClick={() => sendLineOA("ทดสอบส่งข้อความแจ้งเตือนสถานะคลังสินค้าไปยัง LINE OA")}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold"
+                      >
+                        🔔 ทดสอบยิง LINE OA ทันที
+                      </button>
+                    </div>
+
+                    <div className="bg-white rounded-xl shadow overflow-hidden">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-red-50 text-[#8B1E24] border-b text-sm">
+                            <th className="p-4">ชื่อสินค้า</th>
+                            <th className="p-4">หมวดหมู่</th>
+                            <th className="p-4">ราคาขาย</th>
+                            <th className="p-4">คงเหลือ</th>
+                            <th className="p-4">สถานะสต็อก</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y text-sm text-gray-700">
+                          {products.map(p => (
+                            <tr key={p.id} className="hover:bg-gray-50">
+                              <td className="p-4 font-semibold">{p.name}</td>
+                              <td className="p-4 text-gray-500">{p.category}</td>
+                              <td className="p-4 font-bold text-[#8B1E24]">฿{p.price}</td>
+                              <td className="p-4">{p.stock} ชิ้น</td>
+                              <td className="p-4">
+                                {p.stock <= p.minStock ? (
+                                  <span className="bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-xs font-semibold">
+                                    ⚠️ ใกล้หมด (แจ้งเตือน LINE OA แล้ว)
+                                  </span>
+                                ) : (
+                                  <span className="bg-green-100 text-green-700 px-2.5 py-1 rounded-full text-xs font-semibold">ปกติ</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'audit' && (
+                  <div className="bg-white p-6 rounded-xl shadow">
+                    <h3 className="text-lg font-bold text-gray-800 mb-4">ประวัติการตรวจสอบตาม Flowchart Swimlane (Audit Trail)</h3>
+                    <div className="space-y-3">
+                      {lineNotifications.map(l => (
+                        <div key={l.id} className="p-3 bg-gray-50 rounded-lg border flex justify-between items-center text-sm">
+                          <span>{l.text}</span>
+                          <span className="text-xs text-gray-400">{l.time}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </main>
+
+              {/* LINE OA Modal Hub */}
+              {showLineModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                  <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl border-2 border-green-600">
+                    <h3 className="text-lg font-bold text-green-700 mb-2 flex items-center">
+                      <span>💬 LINE OA Notification Hub</span>
+                    </h3>
+                    <p className="text-xs text-gray-500 mb-4">จำลองการส่งข้อความแจ้งเตือนสถานะร้านค้าไปยัง LINE Official Account</p>
+                    <div className="space-y-3 max-h-60 overflow-y-auto mb-4 bg-gray-50 p-3 rounded-lg border">
+                      {lineNotifications.map(n => (
+                        <div key={n.id} className="text-xs bg-white p-2.5 rounded shadow-sm border-l-4 border-green-600">
+                          <span className="font-semibold text-gray-700">{n.text}</span>
+                          <div className="text-gray-400 mt-1 text-[10px]">{n.time}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="space-y-2">
+                      <input 
+                        type="text" 
+                        placeholder="พิมพ์ข้อความแจ้งเตือนส่งเข้า LINE OA..."
+                        value={customLineMsg}
+                        onChange={(e) => setCustomLineMsg(e.target.value)}
+                        className="w-full px-3 py-2 border rounded-lg text-sm"
+                      />
+                      <button 
+                        onClick={() => {
+                          if(customLineMsg) {
+                            sendLineOA(customLineMsg);
+                            setCustomLineMsg('');
+                          }
+                        }}
+                        className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg text-sm font-semibold"
+                      >
+                        ส่งข้อความเข้า LINE OA ทันที
+                      </button>
+                    </div>
+                    <button 
+                      onClick={() => setShowLineModal(false)}
+                      className="w-full mt-3 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg text-sm font-semibold"
+                    >
+                      ปิดหน้าต่าง
+                    </button>
+                  </div>
                 </div>
-              ))}
+              )}
             </div>
-          </div>
-        )}
-      </main>
-    </div>
-  );
-}
+          );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
