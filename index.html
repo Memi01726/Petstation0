@@ -9,11 +9,11 @@ export default function PetsStationApp() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('Admin');
+  const [role, setRole] = useState('Cashier'); // Default เป็นคนขายตามความต้องการ
   const [loginError, setLoginError] = useState('');
 
-  // Navigation State
-  const [activeTab, setActiveTab] = useState('dashboard');
+  // Navigation State (ถ้าเป็น Role Cashier จะล็อกให้หน้าแรกอยู่ที่ POS ทันที)
+  const [activeTab, setActiveTab] = useState('pos');
 
   // POS State
   const [cart, setCart] = useState([]);
@@ -36,19 +36,19 @@ export default function PetsStationApp() {
   const [staffList, setStaffList] = useState([
     { id: 1, name: 'คุณแม่ (ผู้จัดการร้าน)', role: 'Manager', status: 'เข้างานแล้ว', checkIn: '08:30' },
     { id: 2, name: 'สมชาย (พนักงานหน้าร้าน/Stock)', role: 'Staff', status: 'เข้างานแล้ว', checkIn: '09:00' },
-    { id: 3, name: 'วิไล (พนักงานแคชเชียร์)', role: 'Cashier', status: 'ยังไม่เข้างาน', checkIn: '-' }
+    { id: 3, name: 'วิไล (พนักงานแคชเชียร์)', role: 'Cashier', status: 'เข้างานแล้ว', checkIn: '08:45' }
   ]);
 
   // Audit Logs State
   const [auditLogs, setAuditLogs] = useState([
-    { id: 1, time: '10:15:22', user: 'Admin', action: 'Login เข้าสู่ระบบสำเร็จ', type: 'INFO' },
-    { id: 2, time: '10:30:45', user: 'สมชาย', action: 'อัปเดตสต็อกสินค้า อาหารเปียกสุนัข', type: 'STOCK' },
-    { id: 3, time: '11:05:12', user: 'วิไล', action: 'ทำรายการขาย POS (ยอด 625 บาท)', type: 'POS' }
+    { id: 1, time: '08:45:10', user: 'วิไล', action: 'Login เข้าสู่ระบบแคชเชียร์', type: 'AUTH' },
+    { id: 2, time: '09:00:22', user: 'สมชาย', action: 'อัปเดตสต็อกสินค้า อาหารเปียกสุนัข', type: 'STOCK' },
+    { id: 3, time: '10:15:45', user: 'วิไล', action: 'ทำรายการขาย POS (ยอด 335 บาท)', type: 'POS' }
   ]);
 
   const addLog = (action, type) => {
     const now = new Date().toLocaleTimeString();
-    setAuditLogs(prev => [{ id: Date.now(), time: now, user: username || 'Admin', action, type }, ...prev]);
+    setAuditLogs(prev => [{ id: Date.now(), time: now, user: username || 'พนักงาน', action, type }, ...prev]);
   };
 
   const handleLogin = (e) => {
@@ -56,7 +56,7 @@ export default function PetsStationApp() {
     if (username.trim() !== '' && password.trim() !== '') {
       setIsLoggedIn(true);
       setLoginError('');
-      addLog(`ผู้ใช้งาน ${username} (${role}) เข้าสู่ระบบ`, 'AUTH');
+      addLog(`ผู้ใช้งาน ${username} (${role}) เข้าสู่ระบบสำเร็จ`, 'AUTH');
     } else {
       setLoginError('กรุณากรอกชื่อผู้ใช้งานและรหัสผ่านให้ครบถ้วน');
     }
@@ -116,17 +116,7 @@ export default function PetsStationApp() {
     setCashReceived('');
   };
 
-  // Add Product Handler
-  const handleAddProductSubmit = (e) => {
-    e.preventDefault();
-    if (!newProduct.name || newProduct.price <= 0) return;
-    const item = { id: Date.now(), ...newProduct };
-    setProducts(prev => [...prev, item]);
-    addLog(`เพิ่มสินค้าใหม่: ${newProduct.name} เข้าคลัง`, 'STOCK');
-    setNewProduct({ name: '', category: 'อาหารสัตว์', price: 0, stock: 0, minStock: 10 });
-    setShowAddProduct(false);
-  };
-
+  // --- 1. หน้าจอ LOGIN (โทนสีแดงเข้มตามโลโก้) ---
   if (!isLoggedIn) {
     return (
       <div className="min-h-screen bg-[#8B1E24] flex items-center justify-center p-4">
@@ -136,7 +126,7 @@ export default function PetsStationApp() {
               <span className="text-[#8B1E24] font-bold text-3xl">🐾</span>
             </div>
             <h1 className="text-2xl font-bold tracking-wide">PET'S STATION</h1>
-            <p className="text-red-200 text-sm mt-1">ระบบบริหารจัดการสถานีสัตว์เลี้ยง</p>
+            <p className="text-red-200 text-sm mt-1">สถานีสัตว์เลี้ยง - ระบบบริหารจัดการร้าน</p>
           </div>
           <form onSubmit={handleLogin} className="p-8 space-y-5">
             {loginError && (
@@ -145,20 +135,20 @@ export default function PetsStationApp() {
               </div>
             )}
             <div>
-              <label className="block text-gray-700 text-sm font-semibold mb-2">ชื่อผู้ใช้งาน</label>
+              <label className="block text-gray-700 text-sm font-semibold mb-2">ชื่อผู้ใช้งาน (Username)</label>
               <div className="relative">
                 <User className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
                 <input 
                   type="text" 
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="กรอกชื่อผู้ใช้งาน" 
+                  placeholder="เช่น wilai_cashier" 
                   className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
                 />
               </div>
             </div>
             <div>
-              <label className="block text-gray-700 text-sm font-semibold mb-2">รหัสผ่าน</label>
+              <label className="block text-gray-700 text-sm font-semibold mb-2">รหัสผ่าน (Password)</label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
                 <input 
@@ -171,15 +161,15 @@ export default function PetsStationApp() {
               </div>
             </div>
             <div>
-              <label className="block text-gray-700 text-sm font-semibold mb-2">สิทธิ์การใช้งาน (Role)</label>
+              <label className="block text-gray-700 text-sm font-semibold mb-2">เลือกสิทธิ์การใช้งาน (Role)</label>
               <select 
                 value={role} 
                 onChange={(e) => setRole(e.target.value)}
                 className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
               >
-                <option value="Admin">Admin (ผู้ดูแลระบบสูงสุด)</option>
+                <option value="Cashier">Cashier (พนักงานขายหน้าร้าน)</option>
                 <option value="Manager">Manager (ผู้จัดการร้าน)</option>
-                <option value="Cashier">Cashier (พนักงานขาย/แคชเชียร์)</option>
+                <option value="Admin">Admin (ผู้ดูแลระบบสูงสุด)</option>
               </select>
             </div>
             <button 
@@ -194,6 +184,7 @@ export default function PetsStationApp() {
     );
   }
 
+  // --- 2. หน้าจอหลักหลัง LOGIN (เน้น Role คนขาย / POS) ---
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col font-sans">
       {/* Top Navbar */}
@@ -204,13 +195,13 @@ export default function PetsStationApp() {
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-wide">PET'S STATION (สถานีสัตว์เลี้ยง)</h1>
-            <p className="text-xs text-red-200">ระบบบริหารจัดการครบวงจร (POS, Stock, HR, Audit)</p>
+            <p className="text-xs text-red-200">ระบบขายหน้าร้านและจัดการสต็อก</p>
           </div>
         </div>
         <div className="flex items-center space-x-4">
           <div className="text-right">
             <span className="block font-semibold text-sm">{username}</span>
-            <span className="text-xs bg-red-800 px-2 py-0.5 rounded text-red-100">{role}</span>
+            <span className="text-xs bg-red-800 px-2 py-0.5 rounded text-red-100">สถานะ: {role}</span>
           </div>
           <button 
             onClick={handleLogout}
@@ -222,14 +213,16 @@ export default function PetsStationApp() {
         </div>
       </header>
 
-      {/* Navigation Sub-bar */}
+      {/* Navigation Tabs (ซ่อนเมนูผู้บริหารหากเป็นแคชเชียร์ หรือเปิดให้เข้าถึงตามสิทธิ์) */}
       <nav className="bg-white shadow px-6 flex space-x-1 overflow-x-auto">
         {[
-          { id: 'dashboard', label: 'Dashboard', icon: BarChart2 },
           { id: 'pos', label: 'ระบบขายหน้าร้าน (POS)', icon: ShoppingCart },
-          { id: 'stock', label: 'จัดการสต็อก (Stock)', icon: Package },
-          { id: 'hr', label: 'จัดการ HR & พนักงาน', icon: Users },
-          { id: 'audit', label: 'ตรวจสอบระบบ (Audit Log)', icon: FileText },
+          { id: 'stock', label: 'คลังสินค้า (Stock)', icon: Package },
+          ...(role !== 'Cashier' ? [
+            { id: 'dashboard', label: 'Dashboard สรุปยอด', icon: BarChart2 },
+            { id: 'hr', label: 'จัดการ HR & พนักงาน', icon: Users },
+            { id: 'audit', label: 'ตรวจสอบระบบ (Audit Log)', icon: FileText }
+          ] : [])
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -252,95 +245,19 @@ export default function PetsStationApp() {
 
       {/* Main Content Area */}
       <main className="flex-1 p-6 max-w-7xl mx-auto w-full">
-        {/* DASHBOARD TAB */}
-        {activeTab === 'dashboard' && (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-white p-6 rounded-xl shadow border-l-4 border-[#8B1E24]">
-                <p className="text-sm text-gray-500 font-medium">ยอดขายวันนี้ (ประมาณการ)</p>
-                <h3 className="text-3xl font-bold text-gray-800 mt-2">฿ 4,850</h3>
-                <span className="text-xs text-green-600 font-semibold mt-1 inline-block">+12% จากเมื่อวาน</span>
-              </div>
-              <div className="bg-white p-6 rounded-xl shadow border-l-4 border-[#8B1E24]">
-                <p className="text-sm text-gray-500 font-medium">สินค้าในคลังทั้งหมด</p>
-                <h3 className="text-3xl font-bold text-gray-800 mt-2">
-                  {products.reduce((acc, p) => acc + p.stock, 0)} ชิ้น
-                </h3>
-                <span className="text-xs text-gray-500 mt-1 inline-block">จากทั้งหมด {products.length} SKUs</span>
-              </div>
-              <div className="bg-white p-6 rounded-xl shadow border-l-4 border-amber-500">
-                <p className="text-sm text-gray-500 font-medium">สินค้าใกล้หมด (Low Stock)</p>
-                <h3 className="text-3xl font-bold text-amber-600 mt-2">
-                  {products.filter(p => p.stock <= p.minStock).length} รายการ
-                </h3>
-                <span className="text-xs text-amber-600 mt-1 inline-block">ต้องทำการสั่งซื้อเพิ่ม</span>
-              </div>
-              <div className="bg-white p-6 rounded-xl shadow border-l-4 border-green-600">
-                <p className="text-sm text-gray-500 font-medium">พนักงานเข้างานวันนี้</p>
-                <h3 className="text-3xl font-bold text-gray-800 mt-2">
-                  {staffList.filter(s => s.status === 'เข้างานแล้ว').length} / {staffList.length} คน
-                </h3>
-                <span className="text-xs text-green-600 mt-1 inline-block">สถานะปกติ</span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white p-6 rounded-xl shadow">
-                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                  <AlertTriangle className="w-5 h-5 text-amber-500 mr-2" /> รายการสินค้าใกล้หมดสต็อก
-                </h3>
-                <div className="space-y-3">
-                  {products.filter(p => p.stock <= p.minStock).map(p => (
-                    <div key={p.id} className="flex justify-between items-center p-3 bg-red-50 rounded-lg border border-red-100">
-                      <div>
-                        <p className="font-semibold text-gray-800">{p.name}</p>
-                        <p className="text-xs text-gray-500">หมวดหมู่: {p.category}</p>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-red-700 font-bold bg-red-100 px-2.5 py-1 rounded-full text-xs">
-                          เหลือ {p.stock} ชิ้น
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-white p-6 rounded-xl shadow">
-                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                  <FileText className="w-5 h-5 text-[#8B1E24] mr-2" /> กิจกรรมล่าสุดในระบบ (Audit Overview)
-                </h3>
-                <div className="space-y-3">
-                  {auditLogs.slice(0, 4).map(log => (
-                    <div key={log.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                      <div className="flex items-center space-x-3">
-                        <span className="w-2 h-2 rounded-full bg-[#8B1E24]"></span>
-                        <div>
-                          <p className="text-sm font-medium text-gray-800">{log.action}</p>
-                          <p className="text-xs text-gray-400">โดย: {log.user}</p>
-                        </div>
-                      </div>
-                      <span className="text-xs font-mono text-gray-500">{log.time}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* POS SYSTEM TAB */}
+        
+        {/* --- POS TAB (หน้าหลักสำหรับคนขาย) --- */}
         {activeTab === 'pos' && (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Product Catalog */}
+            {/* Catalog สินค้า */}
             <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow flex flex-col">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-gray-800">เลือกสินค้าหน้าร้าน</h3>
+                <h3 className="text-lg font-bold text-gray-800">เลือกสินค้าหน้าร้าน (Quick Catalog)</h3>
                 <div className="relative w-64">
                   <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
                   <input 
                     type="text" 
-                    placeholder="ค้นหาสินค้า..." 
+                    placeholder="ค้นหาชื่อสินค้า / สแกนบาร์โค้ด..." 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-9 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
@@ -363,7 +280,7 @@ export default function PetsStationApp() {
                         <h4 className="font-semibold text-gray-800 mt-2 text-sm line-clamp-2">{product.name}</h4>
                       </div>
                       <div className="mt-4 flex justify-between items-center">
-                        <span className="font-bold text-[#8B1E24]">฿{product.price}</span>
+                        <span className="font-bold text-[#8B1E24] text-lg">฿{product.price}</span>
                         <span className={`text-xs ${product.stock <= 5 ? 'text-red-600 font-bold' : 'text-gray-500'}`}>
                           คงเหลือ: {product.stock}
                         </span>
@@ -373,15 +290,15 @@ export default function PetsStationApp() {
               </div>
             </div>
 
-            {/* Cart & Checkout */}
+            {/* ตะกร้าสินค้าและการชำระเงิน */}
             <div className="bg-white p-6 rounded-xl shadow flex flex-col justify-between">
               <div>
                 <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                  <ShoppingCart className="w-5 h-5 text-[#8B1E24] mr-2" /> ตะกร้าสินค้า
+                  <ShoppingCart className="w-5 h-5 text-[#8B1E24] mr-2" /> ตะกร้าสินค้าปัจจุบัน
                 </h3>
                 <div className="space-y-3 max-h-[250px] overflow-y-auto mb-4">
                   {cart.length === 0 ? (
-                    <p className="text-gray-400 text-center py-10 text-sm">ยังไม่มีสินค้าในตะกร้า</p>
+                    <p className="text-gray-400 text-center py-10 text-sm">ยังไม่มีสินค้าในตะกร้า (คลิกเลือกสินค้าด้านซ้าย)</p>
                   ) : (
                     cart.map(item => (
                       <div key={item.id} className="flex justify-between items-center border-b pb-2">
@@ -401,7 +318,7 @@ export default function PetsStationApp() {
               </div>
 
               <div className="border-t pt-4 space-y-3">
-                <div className="flex justify-between text-lg font-bold text-gray-800">
+                <div className="flex justify-between text-xl font-bold text-gray-800">
                   <span>ยอดรวมสุทธิ:</span>
                   <span className="text-[#8B1E24]">฿{calculateTotal()}</span>
                 </div>
@@ -431,7 +348,7 @@ export default function PetsStationApp() {
                 <div className="bg-white rounded-xl p-6 w-full max-w-sm shadow-2xl border-2 border-[#8B1E24]">
                   <div className="text-center mb-4">
                     <h3 className="font-bold text-lg text-[#8B1E24]">PET'S STATION (สถานีสัตว์เลี้ยง)</h3>
-                    <p className="text-xs text-gray-500">ใบเสร็จรับเงิน / Tax Invoice</p>
+                    <p className="text-xs text-gray-500">ใบเสร็จรับเงินอย่างย่อ</p>
                     <p className="text-xs text-gray-400 mt-1">{lastReceipt.time}</p>
                   </div>
                   <div className="border-t border-b py-3 my-2 space-y-2 text-sm">
@@ -458,9 +375,9 @@ export default function PetsStationApp() {
                   </div>
                   <button 
                     onClick={() => setLastReceipt(null)}
-                    className="w-full bg-gray-800 hover:bg-black text-white py-2 rounded-lg text-sm font-semibold"
+                    className="w-full bg-[#8B1E24] hover:bg-black text-white py-2 rounded-lg text-sm font-semibold"
                   >
-                    ปิดใบเสร็จ
+                    ปิดใบเสร็จ (เริ่มลูกค้ารายถัดไป)
                   </button>
                 </div>
               </div>
@@ -468,31 +385,21 @@ export default function PetsStationApp() {
           </div>
         )}
 
-        {/* STOCK MANAGEMENT TAB */}
+        {/* --- STOCK TAB --- */}
         {activeTab === 'stock' && (
           <div className="space-y-6">
-            <div className="flex justify-between items-center bg-white p-6 rounded-xl shadow">
-              <div>
-                <h3 className="text-lg font-bold text-gray-800">คลังสินค้าสถานีสัตว์เลี้ยง (Stock Control)</h3>
-                <p className="text-xs text-gray-500 mt-1">จัดการรายการสินค้า ตรวจสอบสต็อกคงเหลือ และเพิ่มสินค้าใหม่เข้าคลัง</p>
-              </div>
-              <button 
-                onClick={() => setShowAddProduct(true)}
-                className="flex items-center space-x-2 bg-[#8B1E24] hover:bg-[#6d151b] text-white px-4 py-2 rounded-lg text-sm font-semibold transition"
-              >
-                <Plus className="w-4 h-4" />
-                <span>เพิ่มสินค้าใหม่</span>
-              </button>
+            <div className="bg-white p-6 rounded-xl shadow">
+              <h3 className="text-lg font-bold text-gray-800">ตรวจสอบสต็อกสินค้าคงเหลือ</h3>
+              <p className="text-xs text-gray-500 mt-1">เช็กจำนวนสินค้าในคลังเพื่อแจ้งลูกค้าหรือเติมสต็อก</p>
             </div>
-
             <div className="bg-white rounded-xl shadow overflow-hidden">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-red-50 text-[#8B1E24] border-b text-sm">
                     <th className="p-4">ชื่อสินค้า</th>
                     <th className="p-4">หมวดหมู่</th>
-                    <th className="p-4">ราคาขาย (บาท)</th>
-                    <th className="p-4">สต็อกคงเหลือ</th>
+                    <th className="p-4">ราคาขาย</th>
+                    <th className="p-4">คงเหลือ</th>
                     <th className="p-4">สถานะ</th>
                   </tr>
                 </thead>
@@ -505,13 +412,9 @@ export default function PetsStationApp() {
                       <td className="p-4">{p.stock} ชิ้น</td>
                       <td className="p-4">
                         {p.stock <= p.minStock ? (
-                          <span className="bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-xs font-semibold">
-                            ใกล้หมด
-                          </span>
+                          <span className="bg-red-100 text-red-700 px-2.5 py-1 rounded-full text-xs font-semibold">ใกล้หมด</span>
                         ) : (
-                          <span className="bg-green-100 text-green-700 px-2.5 py-1 rounded-full text-xs font-semibold">
-                            ปกติ
-                          </span>
+                          <span className="bg-green-100 text-green-700 px-2.5 py-1 rounded-full text-xs font-semibold">ปกติ</span>
                         )}
                       </td>
                     </tr>
@@ -519,169 +422,56 @@ export default function PetsStationApp() {
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
 
-            {/* Add Product Modal */}
-            {showAddProduct && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl border-2 border-[#8B1E24]">
-                  <h3 className="text-lg font-bold text-[#8B1E24] mb-4">เพิ่มสินค้าใหม่เข้าคลัง</h3>
-                  <form onSubmit={handleAddProductSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">ชื่อสินค้า</label>
-                      <input 
-                        type="text" 
-                        value={newProduct.name}
-                        onChange={(e) => setNewProduct({...newProduct, name: e.target.value})}
-                        required
-                        className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">หมวดหมู่</label>
-                      <select 
-                        value={newProduct.category}
-                        onChange={(e) => setNewProduct({...newProduct, category: e.target.value})}
-                        className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
-                      >
-                        <option value="อาหารสัตว์">อาหารสัตว์</option>
-                        <option value="อุปกรณ์สัตว์เลี้ยง">อุปกรณ์สัตว์เลี้ยง</option>
-                        <option value="ขนม/อาหารว่าง">ขนม/อาหารว่าง</option>
-                        <option value="ของใช้/อาบน้ำ">ของใช้/อาบน้ำ</option>
-                      </select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">ราคา (บาท)</label>
-                        <input 
-                          type="number" 
-                          value={newProduct.price}
-                          onChange={(e) => setNewProduct({...newProduct, price: parseFloat(e.target.value) || 0})}
-                          className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">จำนวนเริ่มต้น</label>
-                        <input 
-                          type="number" 
-                          value={newProduct.stock}
-                          onChange={(e) => setNewProduct({...newProduct, stock: parseInt(e.target.value) || 0})}
-                          className="w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#8B1E24]"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex space-x-3 pt-4">
-                      <button 
-                        type="button" 
-                        onClick={() => setShowAddProduct(false)}
-                        className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 py-2 rounded-lg text-sm font-semibold"
-                      >
-                        ยกเลิก
-                      </button>
-                      <button 
-                        type="submit" 
-                        className="flex-1 bg-[#8B1E24] hover:bg-[#6d151b] text-white py-2 rounded-lg text-sm font-semibold"
-                      >
-                        บันทึกสินค้า
-                      </button>
-                    </div>
-                  </form>
+        {/* --- DASHBOARD TAB (เฉพาะ Manager / Admin) --- */}
+        {activeTab === 'dashboard' && role !== 'Cashier' && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white p-6 rounded-xl shadow border-l-4 border-[#8B1E24]">
+              <p className="text-sm text-gray-500">ยอดขายรวมวันนี้</p>
+              <h3 className="text-3xl font-bold text-gray-800 mt-2">฿ 4,850</h3>
+            </div>
+            <div className="bg-white p-6 rounded-xl shadow border-l-4 border-amber-500">
+              <p className="text-sm text-gray-500">สินค้าใกล้หมด</p>
+              <h3 className="text-3xl font-bold text-amber-600 mt-2">2 รายการ</h3>
+            </div>
+            <div className="bg-white p-6 rounded-xl shadow border-l-4 border-green-600">
+              <p className="text-sm text-gray-500">พนักงานปฏิบัติงาน</p>
+              <h3 className="text-3xl font-bold text-gray-800 mt-2">3 คน</h3>
+            </div>
+          </div>
+        )}
+
+        {/* --- HR TAB --- */}
+        {activeTab === 'hr' && role !== 'Cashier' && (
+          <div className="bg-white p-6 rounded-xl shadow">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">รายชื่อพนักงานและการเข้างาน</h3>
+            <div className="space-y-3">
+              {staffList.map(s => (
+                <div key={s.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg border">
+                  <div>
+                    <p className="font-semibold">{s.name}</p>
+                    <p className="text-xs text-gray-500">ตำแหน่ง: {s.role}</p>
+                  </div>
+                  <span className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-semibold">{s.status} ({s.checkIn})</span>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* HR & STAFF TAB */}
-        {activeTab === 'hr' && (
-          <div className="space-y-6">
-            <div className="bg-white p-6 rounded-xl shadow">
-              <h3 className="text-lg font-bold text-gray-800">การจัดการ HR และบันทึกเวลาพนักงาน</h3>
-              <p className="text-xs text-gray-500 mt-1">ตรวจสอบสถานะการเข้างาน กะการทำงาน และสิทธิ์พนักงานร้านสถานีสัตว์เลี้ยง</p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow overflow-hidden">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-red-50 text-[#8B1E24] border-b text-sm">
-                    <th className="p-4">ชื่อ-นามสกุล</th>
-                    <th className="p-4">ตำแหน่ง</th>
-                    <th className="p-4">เวลาเข้างาน</th>
-                    <th className="p-4">สถานะ</th>
-                    <th className="p-4">จัดการ</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y text-sm text-gray-700">
-                  {staffList.map(staff => (
-                    <tr key={staff.id} className="hover:bg-gray-50">
-                      <td className="p-4 font-semibold">{staff.name}</td>
-                      <td className="p-4 text-gray-500">{staff.role}</td>
-                      <td className="p-4 font-mono">{staff.checkIn}</td>
-                      <td className="p-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                          staff.status === 'เข้างานแล้ว' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          {staff.status}
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <button 
-                          onClick={() => {
-                            setStaffList(prev => prev.map(s => s.id === staff.id ? {
-                              ...s, 
-                              status: s.status === 'เข้างานแล้ว' ? 'ยังไม่เข้างาน' : 'เข้างานแล้ว',
-                              checkIn: s.status === 'เข้างานแล้ว' ? '-' : new Date().toLocaleTimeString()
-                            } : s));
-                            addLog(`อัปเดตสถานะเข้างานของ ${staff.name}`, 'HR');
-                          }}
-                          className="text-xs bg-red-100 text-[#8B1E24] hover:bg-[#8B1E24] hover:text-white px-3 py-1.5 rounded transition font-semibold"
-                        >
-                          สลับสถานะ
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              ))}
             </div>
           </div>
         )}
 
-        {/* AUDIT LOG TAB */}
-        {activeTab === 'audit' && (
-          <div className="space-y-6">
-            <div className="bg-white p-6 rounded-xl shadow flex justify-between items-center">
-              <div>
-                <h3 className="text-lg font-bold text-gray-800">ระบบตรวจสอบและบันทึกประวัติการทำงาน (Audit Trail)</h3>
-                <p className="text-xs text-gray-500 mt-1">บันทึกเหตุการณ์ความปลอดภัยและการทำธุรกรรมภายในระบบอัตโนมัติ</p>
-              </div>
-              <ShieldCheck className="w-8 h-8 text-[#8B1E24]" />
-            </div>
-
-            <div className="bg-white rounded-xl shadow overflow-hidden">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-red-50 text-[#8B1E24] border-b text-sm">
-                    <th className="p-4">เวลา</th>
-                    <th className="p-4">ประเภท</th>
-                    <th className="p-4">ผู้ใช้งาน</th>
-                    <th className="p-4">รายละเอียดการทำรายการ (Action)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y text-sm text-gray-700">
-                  {auditLogs.map(log => (
-                    <tr key={log.id} className="hover:bg-gray-50">
-                      <td className="p-4 font-mono text-xs text-gray-500">{log.time}</td>
-                      <td className="p-4">
-                        <span className="bg-gray-100 text-gray-800 px-2 py-0.5 rounded text-xs font-bold">
-                          {log.type}
-                        </span>
-                      </td>
-                      <td className="p-4 font-semibold">{log.user}</td>
-                      <td className="p-4 text-gray-800">{log.action}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {/* --- AUDIT LOG TAB --- */}
+        {activeTab === 'audit' && role !== 'Cashier' && (
+          <div className="bg-white p-6 rounded-xl shadow">
+            <h3 className="text-lg font-bold text-gray-800 mb-4">ประวัติการใช้งานระบบ (Audit Trail)</h3>
+            <div className="space-y-2">
+              {auditLogs.map(l => (
+                <div key={l.id} className="text-sm p-3 bg-gray-50 rounded border flex justify-between">
+                  <span>[{l.time}] <b>{l.user}</b>: {l.action}</span>
+                  <span className="text-xs bg-gray-200 px-2 py-0.5 rounded">{l.type}</span>
+                </div>
+              ))}
             </div>
           </div>
         )}
