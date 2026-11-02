@@ -136,11 +136,6 @@
                         src="https://drive.google.com/file/d/1oHOuT1d64i2YyDLVebnkqtwx6kvfxTDq/view?usp=sharing" 
                         alt="PET'S STATION Logo" 
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          // หากลิงก์โหลดรูปไม่ขึ้น จะแสดงไอคอนสำรองอัตโนมัติทันทีเพื่อไม่ให้หน้าพัง
-                          e.target.style.display = 'none';
-                          e.target.parentNode.innerHTML = '<span class="text-[#8B1E24] font-bold text-3xl">🐾</span>';
-                            }}
                               />
                     </div>
                     <h1 className="text-2xl font-bold tracking-wide">PET'S STATION</h1>
